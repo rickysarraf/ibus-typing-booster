@@ -1,0 +1,16 @@
+Source: ibus-typing-booster
+Section: utils
+Priority: optional
+Maintainer: Peng Wu <alexepico@gmail.com>
+Build-Depends: debhelper (>=9), dh-autoreconf, dh-python, python3-all, autoconf, automake, libibus-1.0-dev, pkg-config, libm17n-dev
+Standards-Version: 3.9.6
+Homepage: https://github.com/mike-fabian/ibus-typing-booster
+X-Python3-Version: >= 3.2
+#Vcs-Git: git://anonscm.debian.org/collab-maint/ibus-typing-booster.git
+#Vcs-Browser: https://anonscm.debian.org/cgit/collab-maint/ibus-typing-booster.git
+
+Package: ibus-typing-booster
+Architecture: all
+Depends: python3-dbus, python3-enchant, ${python:Depends}, ${misc:Depends}, m17n-db, libm17n-0
+Description: a completion input method for faster typing
+ ibus-typing-booster is a completion input method to speedup typing.

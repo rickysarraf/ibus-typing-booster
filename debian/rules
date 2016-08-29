@@ -1,0 +1,14 @@
+#!/usr/bin/make -f
+%:
+	dh $@ --with python3,autoreconf
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		--disable-static \
+		--enable-additional \
+		--libdir=/usr/lib \
+		--libexecdir=/usr/lib/ibus
+
+override_dh_install:
+	rm -rf debian/ibus-typing-booster/usr/share/ibus-typing-booster/engine/__pycache__
+	rm -rf debian/ibus-typing-booster/usr/share/ibus-typing-booster/setup/__pycache__

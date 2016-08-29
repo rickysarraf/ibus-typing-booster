@@ -1,0 +1,41 @@
+ibus-typing-booster (1.5.0-1ubuntu6) yakkety; urgency=medium
+
+  * Update en_US.conf
+
+ -- Peng Wu <alexepico@gmail.com>  Mon, 29 Aug 2016 17:21:11 +0800
+
+ibus-typing-booster (1.5.0-1ubuntu5) yakkety; urgency=medium
+
+  * Add patch ibus-use-hunspell-directory.patch
+
+ -- Peng Wu <alexepico@gmail.com>  Mon, 29 Aug 2016 17:04:28 +0800
+
+ibus-typing-booster (1.5.0-1ubuntu4) yakkety; urgency=medium
+
+  * Update depends libm17n
+
+ -- Peng Wu <alexepico@gmail.com>  Mon, 29 Aug 2016 15:49:17 +0800
+
+ibus-typing-booster (1.5.0-1ubuntu3) yakkety; urgency=medium
+
+  * Remove debian/options file
+
+ -- Peng Wu <alexepico@gmail.com>  Mon, 29 Aug 2016 14:43:27 +0800
+
+ibus-typing-booster (1.5.0-1ubuntu2) yakkety; urgency=medium
+
+  * Add depends python3-enchant
+
+ -- Peng Wu <alexepico@gmail.com>  Mon, 29 Aug 2016 14:32:06 +0800
+
+ibus-typing-booster (1.5.0-1ubuntu1) yakkety; urgency=medium
+
+  * Add depends libm17n
+
+ -- Peng Wu <alexepico@gmail.com>  Fri, 26 Aug 2016 14:18:02 +0800
+
+ibus-typing-booster (1.5.0-1) yakkety; urgency=medium
+
+  * Initial release
+
+ -- Peng Wu <alexepico@gmail.com>  Thu, 25 Aug 2016 13:39:24 +0800
