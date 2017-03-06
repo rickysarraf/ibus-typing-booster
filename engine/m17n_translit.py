@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim:et sts=4 sw=4
 #
-# ibus-typing-booster - The Tables engine for IBus
+# ibus-typing-booster - A completion input method for IBus
 #
 # Copyright (c) 2015-2016 Mike FABIAN <mfabian@redhat.com>
 #
@@ -9,13 +9,19 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#  This program is distributed in the hope that it will be useful,
+#
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#  You should have received a copy of the GNU General Public License
+#
+# You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
+'''A module to do transliteration using m17n-lib.
+'''
+
+import sys
 import ctypes
 
 class libm17n__MSymbolStruct(ctypes.Structure):
@@ -126,7 +132,8 @@ def _init():
     libm17n__minput_create_ic.restype = ctypes.POINTER(libm17n__MInputContext)
     global libm17n__minput_reset_ic
     libm17n__minput_reset_ic = libm17n__lib.minput_reset_ic
-    libm17n__minput_reset_ic.argtypes = [ctypes.POINTER(libm17n__MInputContext)]
+    libm17n__minput_reset_ic.argtypes = [
+        ctypes.POINTER(libm17n__MInputContext)]
     global libm17n__minput_filter
     libm17n__minput_filter = libm17n__lib.minput_filter
     libm17n__minput_filter.argtypes = [
@@ -238,6 +245,18 @@ class Transliterator:
     >>> trans.transliterate(['a', 'b', 'c', 'C-c', 'G-4'])
     'abcC-cG-4'
 
+    >>> trans = Transliterator('ja-anthy')
+    >>> trans.transliterate(['c', 'h', 'o', 'u', 'c', 'h', 'o', 'u'])
+    'ちょうちょう'
+
+    >>> trans = Transliterator('zh-py')
+    >>> trans.transliterate(['n', 'i', 'h', 'a', 'o'])
+    '你好'
+
+    >>> trans = Transliterator('zh-tonepy')
+    >>> trans.transliterate(['n', 'i', '3', 'h', 'a', 'o', '3'])
+    '你好'
+
     If initializing the transliterator fails, for example
     because a non-existing input method was given as the argument,
     a ValueError is raised:
@@ -301,7 +320,7 @@ class Transliterator:
         if type(msymbol_list) != type([]):
             raise ValueError('Argument of transliterate() must be a list.')
         if self._dummy:
-            return u''.join(msymbol_list)
+            return ''.join(msymbol_list)
         libm17n__minput_reset_ic(self._ic)
         output = ''
         for symbol in msymbol_list + ['nil']:
@@ -320,4 +339,8 @@ class Transliterator:
 
 if __name__ == "__main__":
     import doctest
-    doctest.testmod()
+    (failed,  attempted) = doctest.testmod()
+    if failed:
+        sys.exit(1)
+    else:
+        sys.exit(0)

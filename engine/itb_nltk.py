@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim:et sts=4 sw=4
 #
-# ibus-typing-booster - The Tables engine for IBus
+# ibus-typing-booster - A completion input method for IBus
 #
 # Copyright (c) 2015-2016 Mike FABIAN <mfabian@redhat.com>
 #
@@ -9,11 +9,13 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#  This program is distributed in the hope that it will be useful,
+#
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#  You should have received a copy of the GNU General Public License
+#
+# You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 '''
@@ -31,6 +33,7 @@ it using:
 
 '''
 
+import sys
 import nltk
 from nltk.corpus import wordnet
 
@@ -76,7 +79,7 @@ def hyponyms(word, keep_original = True):
     Examples:
 
     >>> hyponyms('hat')
-    ['Panama', 'Panama hat', 'Stetson', 'bearskin', 'beaver', 'boater', 'bonnet', 'bowler', 'bowler hat', 'busby', 'campaign hat', 'cavalier hat', 'cocked hat', 'cowboy hat', 'deerstalker', 'derby', 'derby hat', 'dress hat', 'dunce cap', "dunce's cap", 'fedora', 'felt hat', "fool's cap", 'fur hat', 'high hat', 'homburg', 'leghorn', 'millinery', 'opera hat', 'plug hat', 'poke bonnet', 'sailor', 'shako', 'shovel hat', 'silk hat', 'skimmer', 'slouch hat', 'snap-brim hat', 'sombrero', "sou'wester", 'stovepipe', 'straw hat', 'sun hat', 'sunhat', 'ten-gallon hat', 'tirolean', 'titfer', 'top hat', 'topper', 'toque', 'trilby', 'tyrolean', "woman's hat"]
+    ['hat', 'Panama', 'Panama hat', 'Stetson', 'bearskin', 'beaver', 'boater', 'bonnet', 'bowler', 'bowler hat', 'busby', 'campaign hat', 'cavalier hat', 'cocked hat', 'cowboy hat', 'deerstalker', 'derby', 'derby hat', 'dress hat', 'dunce cap', "dunce's cap", 'fedora', 'felt hat', "fool's cap", 'fur hat', 'high hat', 'homburg', 'leghorn', 'millinery', 'opera hat', 'plug hat', 'poke bonnet', 'sailor', 'shako', 'shovel hat', 'silk hat', 'skimmer', 'slouch hat', 'snap-brim hat', 'sombrero', "sou'wester", 'stovepipe', 'straw hat', 'sun hat', 'sunhat', 'ten-gallon hat', 'tirolean', 'titfer', 'top hat', 'topper', 'toque', 'trilby', 'tyrolean', "woman's hat"]
 
     >>> hyponyms('hat', keep_original = False)
     ['Panama', 'Panama hat', 'Stetson', 'bearskin', 'beaver', 'boater', 'bonnet', 'bowler', 'bowler hat', 'busby', 'campaign hat', 'cavalier hat', 'cocked hat', 'cowboy hat', 'deerstalker', 'derby', 'derby hat', 'dress hat', 'dunce cap', "dunce's cap", 'fedora', 'felt hat', "fool's cap", 'fur hat', 'high hat', 'homburg', 'leghorn', 'millinery', 'opera hat', 'plug hat', 'poke bonnet', 'sailor', 'shako', 'shovel hat', 'silk hat', 'skimmer', 'slouch hat', 'snap-brim hat', 'sombrero', "sou'wester", 'stovepipe', 'straw hat', 'sun hat', 'sunhat', 'ten-gallon hat', 'tirolean', 'titfer', 'top hat', 'topper', 'toque', 'trilby', 'tyrolean', "woman's hat"]
@@ -105,7 +108,7 @@ def hypernyms(word, keep_original = True):
     Examples:
 
     >>> hypernyms('fedora')
-    ['chapeau', 'hat', 'lid']
+    ['fedora', 'chapeau', 'hat', 'lid']
 
     >>> hypernyms('fedora', keep_original = False)
     ['chapeau', 'hat', 'lid']
@@ -173,7 +176,7 @@ class __ModuleInitializer:
         return
 
     def __del__(self):
-        _del()
+        # _del()
         return
 
 __module_init = __ModuleInitializer()
@@ -181,6 +184,13 @@ __module_init = __ModuleInitializer()
 BENCHMARK = True
 
 def main():
+    '''
+    Used for testing and profiling.
+
+    “python3 itb_nltk.py”
+
+    runs some tests and prints profiling data.
+    '''
     if BENCHMARK:
         import cProfile, pstats
         profile = cProfile.Profile()
@@ -188,15 +198,20 @@ def main():
 
     import doctest
     _init()
-    doctest.testmod()
+    (failed,  attempted) = doctest.testmod()
 
     if BENCHMARK:
         profile.disable()
-        p = pstats.Stats(profile)
-        p.strip_dirs()
-        p.sort_stats('cumulative')
-        p.print_stats('nltk', 25)
-        p.print_stats('wordnet', 25)
+        stats = pstats.Stats(profile)
+        stats.strip_dirs()
+        stats.sort_stats('cumulative')
+        stats.print_stats('nltk', 25)
+        stats.print_stats('wordnet', 25)
+
+    if failed:
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 if __name__ == "__main__":
     main()

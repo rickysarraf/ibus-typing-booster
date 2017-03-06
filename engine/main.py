@@ -1,24 +1,29 @@
 # vim:et sts=4 sw=4
 #
-# ibus-typing-booster - The Tables engine for IBus
+# ibus-typing-booster - A completion input method for IBus
 #
 # Copyright (c) 2011-2013 Anish Patil <apatil@redhat.com>
-# Copyright (c) 2012-2013 Mike FABIAN <mfabian@redhat.com>
+# Copyright (c) 2012-2016 Mike FABIAN <mfabian@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#  This program is distributed in the hope that it will be useful,
+#
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#  You should have received a copy of the GNU General Public License
+#
+# You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 import os
 import sys
-import optparse
+import argparse
+import time
+from gi import require_version
+require_version('IBus', '1.0')
 from gi.repository import IBus
 from gi.repository import GLib
 import re
@@ -27,76 +32,83 @@ from signal import signal, SIGTERM, SIGINT
 import factory
 import tabsqlitedb
 
-debug_level = int(0)
+DEBUG_LEVEL = int(0)
 try:
-    debug_level = int(os.getenv('IBUS_TYPING_BOOSTER_DEBUG_LEVEL'))
+    DEBUG_LEVEL = int(os.getenv('IBUS_TYPING_BOOSTER_DEBUG_LEVEL'))
 except (TypeError, ValueError):
-    debug_level = int(0)
+    DEBUG_LEVEL = int(0)
 
 try:
-    config_file_dir = os.path.join(
+    CONFIG_FILE_DIR = os.path.join(
         os.getenv('IBUS_TYPING_BOOSTER_LOCATION'),
         'hunspell-tables')
-    icon_dir = os.path.join(
+    ICON_DIR = os.path.join(
         os.getenv('IBUS_TYPING_BOOSTER_LOCATION'),
         'icons')
 except:
-    config_file_dir = "/usr/share/ibus-typing-booster/hunspell-tables"
-    icon_dir = "/usr/share/ibus-typing-booster/icons"
+    CONFIG_FILE_DIR = "/usr/share/ibus-typing-booster/hunspell-tables"
+    ICON_DIR = "/usr/share/ibus-typing-booster/icons"
 
-
-opt = optparse.OptionParser()
-
-opt.set_usage ('%prog')
-opt.add_option('--daemon', '-d',
-        action = 'store_true',dest = 'daemon',default=False,
-        help = 'Run as daemon, default: %default')
-opt.add_option('--ibus', '-i',
-        action = 'store_true',dest = 'ibus',default = False,
-        help = 'Set the IME icon file, default: %default')
-opt.add_option('--xml', '-x',
-        action = 'store_true',dest = 'xml',default = False,
-        help = 'output the engines xml part, default: %default')
-opt.add_option('--no-debug', '-n',
-        action = 'store_false',dest = 'debug',default = True,
-        help = 'redirect stdout and stderr to '
-               + '~/.local/share/ibus-typing-booster/debug.log, '
-               + 'default: %default')
-opt.add_option('--profile', '-p',
-        action = 'store_true', dest = 'profile', default = False,
+def parse_args():
+    '''Parse the command line arguments'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--daemon', '-d',
+        action = 'store_true',
+        dest = 'daemon',
+        default = False,
+        help = 'Run as daemon, default: %(default)s')
+    parser.add_argument(
+        '--ibus', '-i',
+        action = 'store_true',
+        dest = 'ibus',
+        default = False,
+        help = 'Set the IME icon file, default: %(default)s')
+    parser.add_argument(
+        '--xml', '-x',
+        action = 'store_true',
+        dest = 'xml',
+        default = False,
+        help = 'output the engines xml part, default: %(default)s')
+    parser.add_argument(
+        '--no-debug', '-n',
+        action = 'store_true',
+        dest = 'no_debug',
+        default = False,
+        help = 'Do not redirect stdout and stderr to '
+        + '~/.local/share/ibus-typing-booster/debug.log, '
+        + 'default: %(default)s')
+    parser.add_argument(
+        '--profile', '-p',
+        action = 'store_true',
+        dest = 'profile',
+        default = False,
         help = 'print profiling information into the debug log. '
-               + 'Works only together with --debug.')
+        + 'Works only when --no-debug is not used.')
+    return parser.parse_args()
 
-(options, args) = opt.parse_args()
+_ARGS = parse_args()
 
-if (not options.xml) and options.debug:
-    if not os.access(
-            os.path.expanduser('~/.local/share/ibus-typing-booster'),
-            os.F_OK):
-        os.system('mkdir -p ~/.local/share/ibus-typing-booster')
-    logfile = os.path.expanduser('~/.local/share/ibus-typing-booster/debug.log')
-    sys.stdout = open(logfile, mode='a', buffering=1)
-    sys.stderr = open(logfile, mode='a', buffering=1)
-    from time import strftime
-    print('--- %s ---' %strftime('%Y-%m-%d: %H:%M:%S'))
-
-if options.profile:
+if _ARGS.profile:
     import cProfile, pstats
-    profile = cProfile.Profile()
+    _PROFILE = cProfile.Profile()
 
 class IMApp:
-    def __init__(self, dbfile, exec_by_ibus):
-        if debug_level > 1:
+    def __init__(self, exec_by_ibus):
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
-                "IMApp.__init__(dbfile=%s, exec_by_ibus=%s)\n"
-                % (dbfile, exec_by_ibus))
+                "IMApp.__init__(exec_by_ibus=%s)\n"
+                % exec_by_ibus)
         self.__mainloop = GLib.MainLoop()
         self.__bus = IBus.Bus()
         self.__bus.connect("disconnected", self.__bus_destroy_cb)
-        self.__factory = factory.EngineFactory(self.__bus, dbfile)
+        self.__factory = factory.EngineFactory(
+            self.__bus,
+            config_file_dir = CONFIG_FILE_DIR)
         self.destroyed = False
         if exec_by_ibus:
-            self.__bus.request_name("org.freedesktop.IBus.IbusTypingBooster", 0)
+            self.__bus.request_name(
+                "org.freedesktop.IBus.IbusTypingBooster", 0)
         else:
             self.__component = IBus.Component(
                 name="org.freedesktop.IBus.IbusTypingBooster",
@@ -104,7 +116,7 @@ class IMApp:
                 version="0.1.0",
                 license="GPL",
                 author="Anish Patil <apatill@redhat.com>",
-                homepage="http://code.google.com/p/ibus/",
+                homepage="http://mike-fabian.github.io/ibus-typing-booster",
                 textdomain="ibus-typing-booster")
             # now we get IME info from self.__factory.db
             name = self.__factory.db.ime_properties.get("name")
@@ -115,7 +127,7 @@ class IMApp:
             author = self.__factory.db.ime_properties.get("author")
             icon = self.__factory.db.ime_properties.get("icon")
             if icon:
-                icon = os.path.join (icon_dir, icon)
+                icon = os.path.join (ICON_DIR, icon)
                 if not os.access( icon, os.F_OK):
                     icon = ''
             layout = self.__factory.db.ime_properties.get("layout")
@@ -135,20 +147,20 @@ class IMApp:
 
 
     def run(self):
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write("IMApp.run()\n")
-        if options.profile:
-            profile.enable()
+        if _ARGS.profile:
+            _PROFILE.enable()
         self.__mainloop.run()
         self.__bus_destroy_cb()
 
     def quit(self):
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write("IMApp.quit()\n")
         self.__bus_destroy_cb()
 
     def __bus_destroy_cb(self, bus=None):
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write("IMApp.__bus_destroy_cb(bus=%s)\n" % bus)
         if self.destroyed:
             return
@@ -156,15 +168,15 @@ class IMApp:
         self.__factory.do_destroy()
         self.destroyed = True
         self.__mainloop.quit()
-        if options.profile:
-            profile.disable()
-            p = pstats.Stats(profile)
-            p.strip_dirs()
-            p.sort_stats('cumulative')
-            p.print_stats('tabsqlite', 25)
-            p.print_stats('hunspell_suggest', 25)
-            p.print_stats('hunspell_table', 25)
-            p.print_stats('itb_emoji', 25)
+        if _ARGS.profile:
+            _PROFILE.disable()
+            stats = pstats.Stats(_PROFILE)
+            stats.strip_dirs()
+            stats.sort_stats('cumulative')
+            stats.print_stats('tabsqlite', 25)
+            stats.print_stats('hunspell_suggest', 25)
+            stats.print_stats('hunspell_table', 25)
+            stats.print_stats('itb_emoji', 25)
 
 def cleanup (ima_ins):
     ima_ins.quit()
@@ -187,19 +199,29 @@ def indent(elem, level=0):
             elem.tail = i
 
 def main():
-    if options.xml:
+    '''Main program'''
+    if not _ARGS.xml and not _ARGS.no_debug:
+        if not os.access(
+                os.path.expanduser('~/.local/share/ibus-typing-booster'),
+                os.F_OK):
+            os.system('mkdir -p ~/.local/share/ibus-typing-booster')
+        logfile = os.path.expanduser(
+            '~/.local/share/ibus-typing-booster/debug.log')
+        sys.stdout = open(logfile, mode='a', buffering=1)
+        sys.stderr = open(logfile, mode='a', buffering=1)
+        print('--- Starting: %s ---' %time.strftime('%Y-%m-%d: %H:%M:%S'))
+
+    if _ARGS.xml:
         from xml.etree.ElementTree import Element, SubElement, tostring
-        # Find all config files in config_file_dir, extract the ime
+        # Find all config files in CONFIG_FILE_DIR, extract the ime
         # properties and print the xml file for the engines
-        confs = [x for x in os.listdir(config_file_dir) if x.endswith('.conf')]
-        for conf in confs:
-            str_dic = conf.replace('conf', 'dic')
+        confs = [x for x in os.listdir(CONFIG_FILE_DIR) if x.endswith('.conf')]
 
         egs = Element('engines')
 
         for conf in confs:
             _ime_properties = tabsqlitedb.ImeProperties(
-                os.path.join(config_file_dir,conf))
+                os.path.join(CONFIG_FILE_DIR,conf))
             _engine = SubElement (egs,'engine')
 
             _name = SubElement (_engine, 'name')
@@ -233,7 +255,7 @@ def main():
             _icon = SubElement (_engine, 'icon')
             _icon_basename = _ime_properties.get ('icon')
             if _icon_basename:
-                _icon.text = os.path.join (icon_dir, _icon_basename)
+                _icon.text = os.path.join (ICON_DIR, _icon_basename)
 
             _layout = SubElement (_engine, 'layout')
             _layout.text = _ime_properties.get ('layout')
@@ -255,11 +277,11 @@ def main():
         sys.stdout.buffer.write((egsout+'\n').encode('utf-8'))
         return 0
 
-    if options.daemon :
+    if _ARGS.daemon :
         if os.fork():
             sys.exit()
 
-    ima = IMApp('', options.ibus)
+    ima = IMApp(_ARGS.ibus)
     signal (SIGTERM, lambda signum, stack_frame: cleanup(ima))
     signal (SIGINT, lambda signum, stack_frame: cleanup(ima))
     try:

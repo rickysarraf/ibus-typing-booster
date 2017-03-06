@@ -177,7 +177,7 @@ py_compile = $(top_srcdir)/py-compile
 DATA = $(desktop_DATA)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 am__DIST_COMMON = $(srcdir)/Makefile.in \
-	$(srcdir)/ibus-setup-typing-booster.in \
+	$(srcdir)/ibus-setup-typing-booster.in $(srcdir)/version.py.in \
 	$(top_srcdir)/py-compile
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
@@ -311,6 +311,7 @@ desktop_DATA = $(desktop_in_files:.desktop.in=.desktop)
 setup_typing_booster_PYTHON = \
 	i18n.py \
 	main.py \
+	version.py \
 	pkginstall.py \
 	setup.glade \
 	$(NULL)
@@ -332,6 +333,7 @@ CLEANFILES = \
 	$(NULL)
 
 EXTRA_DIST = \
+	version.py.in \
 	$(setup_typing_booster_built_in_files) \
 	$(desktop_in_in_files) \
 	$(NULL)
@@ -369,6 +371,8 @@ $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 	cd $(top_builddir) && $(MAKE) $(AM_MAKEFLAGS) am--refresh
 $(am__aclocal_m4_deps):
 ibus-setup-typing-booster: $(top_builddir)/config.status $(srcdir)/ibus-setup-typing-booster.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+version.py: $(top_builddir)/config.status $(srcdir)/version.py.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-libexecSCRIPTS: $(libexec_SCRIPTS)
 	@$(NORMAL_INSTALL)

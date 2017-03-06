@@ -26,15 +26,10 @@ SUBDIRS = \
 	data \
 	po \
 	setup \
+	tests \
 	$(NULL)
 
 ACLOCAL_AMFLAGS = -I m4
-
-pkgconfig_DATA = \
-	ibus-typing-booster.pc \
-	$(NULL)
-
-pkgconfigdir = $(libdir)/pkgconfig
 
 # To register as an AppStream component to be visible in the software center
 # (See http://www.freedesktop.org/software/appstream/docs/ for more details):
@@ -62,7 +57,6 @@ MAINTAINERCLEANFILES = \
 
 EXTRA_DIST = \
 	config.rpath \
-	autogen.sh \
 	typing-booster.appdata.xml \
 	@PACKAGE_NAME@.spec \
 	$(NULL)
