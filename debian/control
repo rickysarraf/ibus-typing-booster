@@ -14,3 +14,10 @@ Architecture: all
 Depends: python3-dbus, python3-enchant, ${python3:Depends}, ${misc:Depends}, m17n-db, libm17n-0
 Description: a completion input method for faster typing
  ibus-typing-booster is a completion input method to speedup typing.
+ .
+ Major features incoude
+ * Context sensitive completions
+ * Learns from user input
+ * Can be trained
+ * Can be used withy any keyboard alyout
+ * Predicts Unicode symbols and emoji as well
