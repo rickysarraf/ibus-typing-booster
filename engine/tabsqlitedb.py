@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 # vim:et sts=4 sw=4
 #
-# ibus-typing-booster - The Tables engine for IBus
+# ibus-typing-booster - A completion input method for IBus
 #
 # Copyright (c) 2011-2013 Anish Patil <apatil@redhat.com>
-# Copyright (c) 2012-2013 Mike FABIAN <mfabian@redhat.com>
+# Copyright (c) 2012-2016 Mike FABIAN <mfabian@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -25,12 +25,13 @@ import unicodedata
 import sqlite3
 import time
 import re
+import traceback
 import itb_util
 import hunspell_suggest
 
-debug_level = int(0)
+DEBUG_LEVEL = int(0)
 
-user_database_version = '0.65'
+USER_DATABASE_VERSION = '0.65'
 
 class ImeProperties:
     def __init__(self, configfile_path=None):
@@ -39,17 +40,16 @@ class ImeProperties:
         “/usr/share/ibus-typing-booster/hunspell-tables/en_US.conf”
         '''
         self.ime_property_cache = {}
-        if configfile_path.find('typing-booster:') > 0:
-            configfile_path = configfile_path.replace(
-                'typing-booster:','')
         if os.path.exists(configfile_path) and os.path.isfile(configfile_path):
             comment_patt = re.compile('^#')
             with codecs.open(
-                    configfile_path, mode='r', encoding='UTF-8') as file_handle:
+                configfile_path,
+                mode='r',
+                encoding='UTF-8') as file_handle:
                 for line in file_handle:
                     if not comment_patt.match(line):
-                        attr, val = line.strip().split ('=', 1)
-                        self.ime_property_cache[attr.strip()]= val.strip()
+                        attr, val = line.strip().split('=', 1)
+                        self.ime_property_cache[attr.strip()] = val.strip()
         else:
             sys.stderr.write(
                 "Error: ImeProperties: No such file: %s" %configfile_path)
@@ -82,15 +82,23 @@ class tabsqlitedb:
     user_db: Database on disk where the phrases learned from the user are stored
         user_freq >= 1: The number of times the user has used this phrase
     '''
-    def __init__(self, config_filename=None):
-        global debug_level
+    def __init__(self, config_filename='', user_db_file=''):
+        global DEBUG_LEVEL
         try:
-            debug_level = int(os.getenv('IBUS_TYPING_BOOSTER_DEBUG_LEVEL'))
+            DEBUG_LEVEL = int(os.getenv('IBUS_TYPING_BOOSTER_DEBUG_LEVEL'))
         except (TypeError, ValueError):
-            debug_level = int(0)
-        if debug_level > 1:
-            sys.stderr.write("tabsqlitedb.__init__(config_filename=%s)\n"
-                             %config_filename)
+            DEBUG_LEVEL = int(0)
+        if DEBUG_LEVEL > 1:
+            sys.stderr.write(
+                "tabsqlitedb.__init__(config_filename = %s, user_db_file = %s)\n"
+                %(config_filename, user_db_file))
+        self.user_db_file = user_db_file
+        if not self.user_db_file:
+            self.user_db_file = path.join(
+                os.getenv('HOME'), '.local/share/ibus-typing-booster/user.db')
+        if (self.user_db_file != ':memory:'
+                and not os.path.isdir(os.path.dirname(self.user_db_file))):
+            os.makedirs(os.path.dirname(self.user_db_file))
         self._phrase_table_column_names = [
             'id',
             'input_phrase',
@@ -102,10 +110,7 @@ class tabsqlitedb:
 
         self.old_phrases = []
 
-        self._conf_file_path = "/usr/share/ibus-typing-booster/hunspell-tables/"
-
-        self.ime_properties = ImeProperties(
-            self._conf_file_path+config_filename)
+        self.ime_properties = ImeProperties(config_filename)
         self._language = self.ime_properties.get('language')
         self._normalization_form_internal = 'NFD'
 
@@ -114,45 +119,39 @@ class tabsqlitedb:
             for x in self.ime_properties.get("hunspell_dict").split(',')]
         self.hunspell_obj = hunspell_suggest.Hunspell(dictionary_names)
 
-        user_db = 'user.db'
-        # user database:
-        if user_db != None:
-            home_path = os.getenv("HOME")
-            tables_path = path.join(
-                home_path, ".local/share/ibus-typing-booster")
-            if not path.isdir(tables_path):
-                os.makedirs(tables_path)
-            user_db = path.join(tables_path, user_db)
-            if not path.exists(user_db):
+        if self.user_db_file != ':memory:':
+            if not os.path.exists(self.user_db_file):
                 sys.stderr.write(
                     "The user database %(udb)s does not exist yet.\n"
-                    %{'udb': user_db})
+                    %{'udb': self.user_db_file})
             else:
                 try:
-                    desc = self.get_database_desc (user_db)
-                    if (desc == None
-                        or desc["version"] != user_database_version
-                        or (self.get_number_of_columns_of_phrase_table(user_db)
-                            != len(self._phrase_table_column_names))):
+                    desc = self.get_database_desc(self.user_db_file)
+                    if (desc is None
+                            or desc["version"] != USER_DATABASE_VERSION
+                            or (self.get_number_of_columns_of_phrase_table(
+                                self.user_db_file)
+                                != len(self._phrase_table_column_names))):
                         sys.stderr.write(
-                            "The user database %(udb)s " %{'udb': user_db}
+                            "The user database %(udb)s "
+                            %{'udb': self.user_db_file}
                             + "seems to be incompatible.\n")
-                        if desc == None:
+                        if desc is None:
                             sys.stderr.write(
                                 "There is no version information in "
                                 + "the database.\n")
-                        elif desc["version"] != user_database_version:
+                        elif desc["version"] != USER_DATABASE_VERSION:
                             sys.stderr.write(
                                 "The version of the database does not match "
                                 + "(too old or too new?).\n")
                             sys.stderr.write(
                                 "ibus-typing-booster wants version=%s\n"
-                                %user_database_version)
+                                %USER_DATABASE_VERSION)
                             sys.stderr.write(
                                 "But the  database actually has version=%s\n"
                                 %desc["version"])
                         elif (self.get_number_of_columns_of_phrase_table(
-                                user_db)
+                                self.user_db_file)
                               != len(self._phrase_table_column_names)):
                             sys.stderr.write(
                                 "The number of columns of the database "
@@ -165,26 +164,29 @@ class tabsqlitedb:
                                 + "%(col)s columns.\n"
                                 %{'col':
                                   self.get_number_of_columns_of_phrase_table(
-                                      user_db)})
+                                      self.user_db_file)})
                         sys.stderr.write(
                             "Trying to recover the phrases from the old, "
                             + "incompatible database.\n")
-                        self.old_phrases = self.extract_user_phrases(user_db)
-                        from time import strftime
-                        timestamp = strftime('-%Y-%m-%d_%H:%M:%S')
+                        self.old_phrases = self.extract_user_phrases()
+                        timestamp = time.strftime('-%Y-%m-%d_%H:%M:%S')
                         sys.stderr.write(
                             'Renaming the incompatible database to '
-                            + '"%(name)s".\n' %{'name': user_db+timestamp})
-                        if os.path.exists(user_db):
-                            os.rename(user_db, user_db+timestamp)
-                        if os.path.exists(user_db+'-shm'):
-                            os.rename(user_db+'-shm', user_db+'-shm'+timestamp)
-                        if os.path.exists(user_db+'-wal'):
-                            os.rename(user_db+'-wal', user_db+'-wal'+timestamp)
+                            + '"%(name)s".\n'
+                            %{'name': self.user_db_file+timestamp})
+                        if os.path.exists(self.user_db_file):
+                            os.rename(self.user_db_file,
+                                      self.user_db_file+timestamp)
+                        if os.path.exists(self.user_db_file+'-shm'):
+                            os.rename(self.user_db_file+'-shm',
+                                      self.user_db_file+'-shm'+timestamp)
+                        if os.path.exists(self.user_db_file+'-wal'):
+                            os.rename(self.user_db_file+'-wal',
+                                      self.user_db_file+'-wal'+timestamp)
                         sys.stderr.write(
                             "Creating a new, empty database \"%(name)s\".\n"
-                            %{'name': user_db})
-                        self.init_user_db(user_db)
+                            %{'name': self.user_db_file})
+                        self.init_user_db()
                         sys.stderr.write(
                             "If user phrases were successfully recovered "
                             + "from the old,\n"
@@ -193,64 +195,68 @@ class tabsqlitedb:
                     else:
                         sys.stderr.write(
                             "Compatible database %(db)s found.\n"
-                            %{'db': user_db})
+                            %{'db': self.user_db_file})
                 except:
-                    import traceback
                     traceback.print_exc()
-        else:
-            user_db = ":memory:"
 
         # open user phrase database
         try:
             sys.stderr.write(
-                "Connect to the database %(name)s.\n" %{'name': user_db})
-            self.db = sqlite3.connect(user_db)
-            self.db.execute('PRAGMA encoding = "UTF-8";')
-            self.db.execute('PRAGMA case_sensitive_like = true;')
-            self.db.execute('PRAGMA page_size = 4096; ')
-            self.db.execute('PRAGMA cache_size = 20000;')
-            self.db.execute('PRAGMA temp_store = MEMORY;')
-            self.db.execute('PRAGMA journal_mode = WAL;')
-            self.db.execute('PRAGMA journal_size_limit = 1000000;')
-            self.db.execute('PRAGMA synchronous = NORMAL;')
-            self.db.execute('ATTACH DATABASE "%s" AS user_db;' % user_db)
+                "Connect to the database %(name)s.\n"
+                %{'name': self.user_db_file})
+            self.db = sqlite3.connect(self.user_db_file)
+            self.db.executescript('''
+                PRAGMA encoding = "UTF-8";
+                PRAGMA case_sensitive_like = true;
+                PRAGMA page_size = 4096;
+                PRAGMA cache_size = 20000;
+                PRAGMA temp_store = MEMORY;
+                PRAGMA journal_mode = WAL;
+                PRAGMA journal_size_limit = 1000000;
+                PRAGMA synchronous = NORMAL;
+                ATTACH DATABASE "%s" AS user_db;
+            ''' % self.user_db_file)
         except:
             sys.stderr.write(
-                "Could not open the database %(name)s.\n" %{'name': user_db})
-            from time import strftime
-            timestamp = strftime('-%Y-%m-%d_%H:%M:%S')
+                "Could not open the database %(name)s.\n"
+                %{'name': self.user_db_file})
+            timestamp = time.strftime('-%Y-%m-%d_%H:%M:%S')
             sys.stderr.write(
                 "Renaming the incompatible database to \"%(name)s\".\n"
-                %{'name': user_db+timestamp})
-            if os.path.exists(user_db):
-                os.rename(user_db, user_db+timestamp)
-            if os.path.exists(user_db+'-shm'):
-                os.rename(user_db+'-shm', user_db+'-shm'+timestamp)
-            if os.path.exists(user_db+'-wal'):
-                os.rename(user_db+'-wal', user_db+'-wal'+timestamp)
+                %{'name': self.user_db_file+timestamp})
+            if os.path.exists(self.user_db_file):
+                os.rename(self.user_db_file, self.user_db_file+timestamp)
+            if os.path.exists(self.user_db_file+'-shm'):
+                os.rename(self.user_db_file+'-shm',
+                          self.user_db_file+'-shm'+timestamp)
+            if os.path.exists(self.user_db_file+'-wal'):
+                os.rename(self.user_db_file+'-wal',
+                          self.user_db_file+'-wal'+timestamp)
             sys.stderr.write(
                 "Creating a new, empty database \"%(name)s\".\n"
-                %{'name': user_db})
-            self.init_user_db(user_db)
-            self.db = sqlite3.connect(user_db)
-            self.db.execute('PRAGMA encoding = "UTF-8";')
-            self.db.execute('PRAGMA case_sensitive_like = true;')
-            self.db.execute('PRAGMA page_size = 4096; ')
-            self.db.execute('PRAGMA cache_size = 20000;')
-            self.db.execute('PRAGMA temp_store = MEMORY;')
-            self.db.execute('PRAGMA journal_mode = WAL;')
-            self.db.execute('PRAGMA journal_size_limit = 1000000;')
-            self.db.execute('PRAGMA synchronous = NORMAL;')
-            self.db.execute('ATTACH DATABASE "%s" AS user_db;' % user_db)
-        self.create_tables("user_db")
+                %{'name': self.user_db_file})
+            self.init_user_db()
+            self.db = sqlite3.connect(self.user_db_file)
+            self.db.executescript('''
+                PRAGMA encoding = "UTF-8";
+                PRAGMA case_sensitive_like = true;
+                PRAGMA page_size = 4096;
+                PRAGMA cache_size = 20000;
+                PRAGMA temp_store = MEMORY;
+                PRAGMA journal_mode = WAL;
+                PRAGMA journal_size_limit = 1000000;
+                PRAGMA synchronous = NORMAL;
+                ATTACH DATABASE "%s" AS user_db;
+            ''' % self.user_db_file)
+        self.create_tables()
         if self.old_phrases:
             sqlargs = []
             for x in self.old_phrases:
                 sqlargs.append(
                     {'input_phrase': x[0],
                      'phrase': x[0],
-                     'p_phrase': u'',
-                     'pp_phrase': u'',
+                     'p_phrase': '',
+                     'pp_phrase': '',
                      'user_freq': x[1],
                      'timestamp': time.time()})
             sqlstr = '''
@@ -260,7 +266,6 @@ class tabsqlitedb:
             try:
                 self.db.executemany(sqlstr, sqlargs)
             except:
-                import traceback
                 traceback.print_exc()
             self.db.commit()
             self.db.execute('PRAGMA wal_checkpoint;')
@@ -276,21 +281,21 @@ class tabsqlitedb:
         #    self.optimize_database()
         #except:
         #    print "exception in optimize_database()"
-        #    import traceback
         #    traceback.print_exc ()
 
         # try create all hunspell-tables in user database
-        self.create_indexes("user_db", commit=False)
+        self.create_indexes(commit=False)
         self.generate_userdb_desc()
 
-    def update_phrase(self, input_phrase=u'', phrase=u'',
-                      p_phrase=u'', pp_phrase=u'',
-                      user_freq=0, database='user_db', commit=True):
+    def update_phrase(self, input_phrase='', phrase='',
+                      p_phrase='', pp_phrase='',
+                      user_freq=0, commit=True):
         '''
         update the user frequency of a phrase
         '''
         if not input_phrase or not phrase:
             return
+        input_phrase = itb_util.remove_accents(input_phrase)
         input_phrase = unicodedata.normalize(
             self._normalization_form_internal, input_phrase)
         phrase = unicodedata.normalize(
@@ -300,18 +305,18 @@ class tabsqlitedb:
         pp_phrase = unicodedata.normalize(
             self._normalization_form_internal, pp_phrase)
         sqlstr = '''
-        UPDATE %(database)s.phrases
+        UPDATE user_db.phrases
         SET user_freq = :user_freq, timestamp = :timestamp
         WHERE input_phrase = :input_phrase
          AND phrase = :phrase AND p_phrase = :p_phrase AND pp_phrase = :pp_phrase
-        ;''' % {'database':database}
+        ;'''
         sqlargs = {'user_freq': user_freq,
                    'input_phrase': input_phrase,
                    'phrase': phrase,
                    'p_phrase': p_phrase,
                    'pp_phrase': pp_phrase,
                    'timestamp': time.time()}
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.update_phrase() sqlstr=%s\n" %sqlstr)
             sys.stderr.write(
@@ -321,49 +326,48 @@ class tabsqlitedb:
             if commit:
                 self.db.commit()
         except:
-            import traceback
             traceback.print_exc()
 
-    def sync_usrdb (self):
+    def sync_usrdb(self):
         '''
         Trigger a checkpoint operation.
         '''
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.sync_userdb() "
                 + "commit and execute checkpoint ...\n")
         self.db.commit()
         self.db.execute('PRAGMA wal_checkpoint;')
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.sync_userdb() "
                 + "commit and execute checkpoint done.\n")
 
-    def create_tables (self, database):
+    def create_tables(self):
         '''Create table for the phrases.'''
-        sqlstr = '''CREATE TABLE IF NOT EXISTS %s.phrases
+        sqlstr = '''CREATE TABLE IF NOT EXISTS user_db.phrases
                     (id INTEGER PRIMARY KEY,
                     input_phrase TEXT, phrase TEXT, p_phrase TEXT, pp_phrase TEXT,
-                    user_freq INTEGER, timestamp REAL);''' % database
+                    user_freq INTEGER, timestamp REAL);'''
         self.db.execute(sqlstr)
         self.db.commit()
 
-    def add_phrase(self, input_phrase=u'', phrase=u'',
-                   p_phrase=u'', pp_phrase=u'',
-                   user_freq=0, database = 'main', commit=True):
+    def add_phrase(self, input_phrase='', phrase='',
+                   p_phrase='', pp_phrase='',
+                   user_freq=0, commit=True):
         '''
         Add phrase to database
         '''
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.add_phrase() "
                 + "input_phrase=%s " % input_phrase.encode('UTF-8')
                 + "phrase=%s " % phrase.encode('UTF-8')
                 + "user_freq=%s " % user_freq
-                + "database=%s\n" % database
             )
         if not input_phrase or not phrase:
             return
+        input_phrase = itb_util.remove_accents(input_phrase)
         input_phrase = unicodedata.normalize(
             self._normalization_form_internal, input_phrase)
         phrase = unicodedata.normalize(
@@ -373,10 +377,10 @@ class tabsqlitedb:
         pp_phrase = unicodedata.normalize(
             self._normalization_form_internal, pp_phrase)
         select_sqlstr = '''
-        SELECT * FROM %(database)s.phrases
+        SELECT * FROM user_db.phrases
         WHERE input_phrase = :input_phrase
         AND phrase = :phrase AND p_phrase = :p_phrase AND pp_phrase = :pp_phrase
-        ;'''  % {'database': database}
+        ;'''
         select_sqlargs = {
             'input_phrase': input_phrase,
             'phrase': phrase,
@@ -388,59 +392,58 @@ class tabsqlitedb:
             return
 
         insert_sqlstr = '''
-        INSERT INTO %(database)s.phrases
+        INSERT INTO user_db.phrases
         (input_phrase, phrase, p_phrase, pp_phrase, user_freq, timestamp)
         VALUES (:input_phrase, :phrase, :p_phrase, :pp_phrase, :user_freq, :timestamp)
-        ;''' % {'database': database}
+        ;'''
         insert_sqlargs = {'input_phrase': input_phrase,
                           'phrase': phrase,
                           'p_phrase': p_phrase,
                           'pp_phrase': pp_phrase,
                           'user_freq': user_freq,
                           'timestamp': time.time()}
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.add_phrase() insert_sqlstr=%s\n" %insert_sqlstr)
             sys.stderr.write(
                 "tabsqlitedb.add_phrase() insert_sqlargs=%s\n" %insert_sqlargs)
         try:
-            self.db.execute (insert_sqlstr, insert_sqlargs)
+            self.db.execute(insert_sqlstr, insert_sqlargs)
             if commit:
                 self.db.commit()
         except Exception:
-            import traceback
             traceback.print_exc()
 
-    def optimize_database (self, database='main'):
+    def optimize_database(self):
         sqlstr = '''
             CREATE TABLE tmp AS SELECT * FROM %(database)s.phrases;
-            DELETE FROM %(database)s.phrases;
-            INSERT INTO %(database)s.phrases SELECT * FROM tmp ORDER BY
+            DELETE FROM user_db.phrases;
+            INSERT INTO user_db.phrases SELECT * FROM tmp ORDER BY
             input_phrase, user_freq DESC, id ASC;
-            DROP TABLE tmp;''' % {'database':database,}
-        self.db.executescript (sqlstr)
-        self.db.executescript ("VACUUM;")
+            DROP TABLE tmp;'''
+        self.db.executescript(sqlstr)
+        self.db.executescript("VACUUM;")
         self.db.commit()
 
-    def drop_indexes(self, database):
+    def drop_indexes(self):
         '''Drop the index in database to reduce it's size'''
         sqlstr = '''
-            DROP INDEX IF EXISTS %(database)s.phrases_index_p;
-            DROP INDEX IF EXISTS %(database)s.phrases_index_i;
+            DROP INDEX IF EXISTS user_db.phrases_index_p;
+            DROP INDEX IF EXISTS user_db.phrases_index_i;
             VACUUM;
-            ''' % { 'database':database }
+            '''
 
-        self.db.executescript (sqlstr)
+        self.db.executescript(sqlstr)
         self.db.commit()
 
-    def create_indexes(self, database, commit=True):
+    def create_indexes(self, commit=True):
         sqlstr = '''
-        CREATE INDEX IF NOT EXISTS %(database)s.phrases_index_p ON phrases
+        CREATE INDEX IF NOT EXISTS user_db.phrases_index_p ON phrases
         (input_phrase, id ASC);
-        CREATE INDEX IF NOT EXISTS %(database)s.phrases_index_i ON phrases
+        CREATE INDEX IF NOT EXISTS user_db.phrases_index_i ON phrases
         (phrase)
-        ;''' % {'database':database}
-        self.db.executescript (sqlstr)
+        ;'''
+        self.db.executescript(sqlstr)
         if commit:
             self.db.commit()
 
@@ -452,7 +455,7 @@ class tabsqlitedb:
                           x[0]       # phrase alphabetical
                       ))[:20]
 
-    def select_words(self, input_phrase, p_phrase=u'', pp_phrase=u''):
+    def select_words(self, input_phrase, p_phrase='', pp_phrase=''):
         '''
         Get phrases from database completing input_phrase.
 
@@ -466,25 +469,33 @@ class tabsqlitedb:
             self._normalization_form_internal, p_phrase)
         pp_phrase = unicodedata.normalize(
             self._normalization_form_internal, pp_phrase)
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.select_words() "
                 + "input_phrase=%s " % input_phrase.encode('UTF-8')
                 + "p_phrase=%s " % p_phrase.encode('UTF-8')
                 + "pp_phrase=%s\n" % pp_phrase.encode('UTF-8'))
         phrase_frequencies = {}
-        for x in self.hunspell_obj.suggest(input_phrase):
-            if  x.startswith(input_phrase):
-                phrase_frequencies[x] = 0
-            else:
-                phrase_frequencies[x] = -1 # spelling correction suggestion
-        if debug_level > 1:
+        phrase_frequencies.update([
+            x for x in self.hunspell_obj.suggest(input_phrase)])
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.select_words() hunspell: best_candidates=%s\n"
                 %self.best_candidates(phrase_frequencies))
+        # Remove the accents *after* getting the hunspell candidates.
+        # If the accents were removed before getting the hunspell candidates
+        # an input phrase like “Glühwürmchen” would not be added as a
+        # candidate because hunspell would get “Gluhwurmchen” then and would
+        # not validate that as a correct word. And, because “Glühwürmchen”
+        # is not in the German hunspell dictionary as a single word but
+        # created by suffix and prefix rules, the accent insensitive match
+        # in the German hunspell dictionary would not find it either.
+        input_phrase = itb_util.remove_accents(input_phrase)
+        input_phrase = unicodedata.normalize(
+            self._normalization_form_internal, input_phrase)
         # Now phrase_frequencies might contain something like this:
         #
-        # {u'code': 0, u'communicability': 0, u'cold': 0, u'colour': 0}
+        # {'code': 0, 'communicability': 0, 'cold': 0, 'colour': 0}
 
         # To quote a string to be used as a parameter when assembling
         # an sqlite statement with Python string operations, remove
@@ -524,13 +535,12 @@ class tabsqlitedb:
             results_uni = self.db.execute(sqlstr, sqlargs).fetchall()
             # Then the result returned by .fetchall() is:
             #
-            # [(u'colour', 4), (u'cold', 1), (u'conspiracy', 6)]
+            # [('colour', 4), ('cold', 1), ('conspiracy', 6)]
             #
             # (“c|conspiracy|1” is not selected because it doesn’t
             # match the user input “LIKE co%”! I.e. this is filtered
             # out by the VIEW created above already)
         except:
-            import traceback
             traceback.print_exc()
         if not results_uni:
             # If no unigrams matched, bigrams and trigrams cannot
@@ -540,19 +550,18 @@ class tabsqlitedb:
         # Now normalize the unigram frequencies with the total count
         # (which is 11 in the above example), which gives us the
         # normalized result:
-        # [(u'colour', 4/11), (u'cold', 1/11), (u'conspiracy', 6/11)]
+        # [('colour', 4/11), ('cold', 1/11), ('conspiracy', 6/11)]
         sqlstr = 'SELECT sum(user_freq) FROM like_input_phrase_view;'
         try:
             count = self.db.execute(sqlstr, sqlargs).fetchall()[0][0]
         except:
-            import traceback
             traceback.print_exc()
         # Updating the phrase_frequency dictionary with the normalized
-        # results gives: {u'conspiracy': 6/11, u'code': 0,
-        # u'communicability': 0, u'cold': 1/11, u'colour': 4/11}
+        # results gives: {'conspiracy': 6/11, 'code': 0,
+        # 'communicability': 0, 'cold': 1/11, 'colour': 4/11}
         for x in results_uni:
             phrase_frequencies.update([(x[0], x[1]/float(count))])
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.select_words() Unigram best_candidates=%s\n"
                 %self.best_candidates(phrase_frequencies))
@@ -566,7 +575,6 @@ class tabsqlitedb:
         try:
             results_bi = self.db.execute(sqlstr, sqlargs).fetchall()
         except:
-            import traceback
             traceback.print_exc()
         if not results_bi:
             # If no bigram could be matched, return what we have so far:
@@ -578,7 +586,6 @@ class tabsqlitedb:
         try:
             count_p_phrase = self.db.execute(sqlstr, sqlargs).fetchall()[0][0]
         except:
-            import traceback
             traceback.print_exc()
         # Update the phrase frequency dictionary by using a linear
         # combination of the unigram and the bigram results, giving
@@ -588,7 +595,7 @@ class tabsqlitedb:
                 [(x[0],
                   0.5*x[1]/float(count_p_phrase)
                   +0.5*phrase_frequencies[x[0]])])
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.select_words() Bigram best_candidates=%s\n"
                 %self.best_candidates(phrase_frequencies))
@@ -602,7 +609,6 @@ class tabsqlitedb:
         try:
             results_tri = self.db.execute(sqlstr, sqlargs).fetchall()
         except:
-            import traceback
             traceback.print_exc()
         if not results_tri:
             # if no trigram could be matched, return what we have so far:
@@ -616,7 +622,6 @@ class tabsqlitedb:
             count_pp_phrase_p_phrase = self.db.execute(
                 sqlstr, sqlargs).fetchall()[0][0]
         except:
-            import traceback
             traceback.print_exc()
         # Update the phrase frequency dictionary by using a linear
         # combination of the bigram and the trigram results, giving
@@ -628,46 +633,50 @@ class tabsqlitedb:
                 [(x[0],
                   0.5*x[1]/float(count_pp_phrase_p_phrase)
                   +0.5*phrase_frequencies[x[0]])])
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.select_words() Trigram best_candidates=%s\n"
                 %self.best_candidates(phrase_frequencies))
         return self.best_candidates(phrase_frequencies)
 
-    def generate_userdb_desc (self):
+    def generate_userdb_desc(self):
         try:
             sqlstring = ('CREATE TABLE IF NOT EXISTS user_db.desc '
                          + '(name PRIMARY KEY, value);')
-            self.db.executescript (sqlstring)
+            self.db.executescript(sqlstring)
             sqlstring = 'INSERT OR IGNORE INTO user_db.desc  VALUES (?, ?);'
-            self.db.execute (sqlstring, ('version', user_database_version))
+            self.db.execute(sqlstring, ('version', USER_DATABASE_VERSION))
             sqlstring = (
                 'INSERT OR IGNORE INTO user_db.desc '
                 + 'VALUES (?, DATETIME("now", "localtime"));')
-            self.db.execute (sqlstring, ("create-time", ))
-            self.db.commit ()
+            self.db.execute(sqlstring, ("create-time", ))
+            self.db.commit()
         except:
-            import traceback
-            traceback.print_exc ()
+            traceback.print_exc()
 
-    def init_user_db(self, db_file):
-        if not path.exists (db_file):
-            db = sqlite3.connect (db_file)
-            db.execute('PRAGMA encoding = "UTF-8";')
-            db.execute('PRAGMA case_sensitive_like = true;')
-            db.execute('PRAGMA page_size = 4096;')
+    def init_user_db(self):
+        if self.user_db_file == ':memory:':
+            return
+        if not path.exists(self.user_db_file):
+            db = sqlite3.connect(self.user_db_file)
             # a database containing the complete German Hunspell
             # dictionary has less then 6000 pages. 20000 pages
             # should be enough to cache the complete database
             # in most cases.
-            db.execute('PRAGMA cache_size = 20000;')
-            db.execute('PRAGMA temp_store = MEMORY; ')
-            db.execute('PRAGMA journal_mode = WAL;')
-            db.execute('PRAGMA journal_size_limit = 1000000;')
-            db.execute('PRAGMA synchronous = NORMAL;')
+            db.executescript('''
+                PRAGMA encoding = "UTF-8";
+                PRAGMA case_sensitive_like = true;
+                PRAGMA page_size = 4096;
+                PRAGMA cache_size = 20000;
+                PRAGMA temp_store = MEMORY;
+                PRAGMA journal_mode = WAL;
+                PRAGMA journal_size_limit = 1000000;
+                PRAGMA synchronous = NORMAL;
+            ''')
             db.commit()
 
     def get_database_desc(self, db_file):
+        '''Get the description of the database'''
         if not path.exists(db_file):
             return None
         try:
@@ -694,10 +703,10 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
         This result could be on a single line, as above, or on multiple
         lines.
         '''
-        if not path.exists (db_file):
-            return 0
+        if not path.exists(db_file):
+            return None
         try:
-            db = sqlite3.connect (db_file)
+            db = sqlite3.connect(db_file)
             tp_res = db.execute(
                 "select sql from sqlite_master where name='phrases';"
             ).fetchall()
@@ -713,9 +722,32 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
         except:
             return 0
 
+    def list_user_shortcuts(self):
+        '''Returns a list of user defined shortcuts from the user database.
+
+        :rtype: List of tuples of strings: [(str, str), ...]
+
+        '''
+        sqlstr = '''
+        SELECT input_phrase, phrase FROM user_db.phrases WHERE user_freq >= :freq
+        ;'''
+        sqlargs = {'freq': itb_util.SHORTCUT_USER_FREQ}
+        if DEBUG_LEVEL > 1:
+            sys.stderr.write(
+                "tabsqlitedb.list_user_shortcuts() sqlstr=%s\n"
+                %sqlstr)
+            sys.stderr.write(
+                "tabsqlitedb.list_user_shortcuts() sqlargs=%s\n"
+                %sqlargs)
+        result = self.db.execute(sqlstr, sqlargs).fetchall()
+        if DEBUG_LEVEL > 1:
+            sys.stderr.write(
+                "tabsqlite.list_user_shortcuts() result=%s\n" %result)
+        return result
+
     def check_phrase_and_update_frequency(
-            self, input_phrase=u'', phrase=u'', p_phrase=u'',
-            pp_phrase=u'', database='user_db', commit=True):
+            self, input_phrase='', phrase='', p_phrase='',
+            pp_phrase='', user_freq_increment=1, commit=True):
         '''
         Check whether input_phrase and phrase are already in database. If
         they are in the database, increase the frequency by 1, if not
@@ -731,16 +763,16 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
             self._normalization_form_internal, p_phrase)
         pp_phrase = unicodedata.normalize(
             self._normalization_form_internal, pp_phrase)
+        input_phrase = itb_util.remove_accents(input_phrase)
         input_phrase = unicodedata.normalize(
             self._normalization_form_internal, input_phrase)
 
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.check_phrase_and_update_frequency() "
-                + "phrase=%(p)s, input_phrase=%(t)s, database=%(d)s\n"
+                + "phrase=%(p)s, input_phrase=%(t)s\n"
                 %{'p': phrase.encode('UTF-8'),
-                  't': input_phrase.encode('UTF-8'),
-                  'd': database})
+                  't': input_phrase.encode('UTF-8')})
 
         # There should never be more than 1 database row for the same
         # input_phrase *and* phrase. So the following query on
@@ -760,7 +792,7 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
                    'phrase': phrase,
                    'p_phrase': p_phrase,
                    'pp_phrase': pp_phrase}
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.check_phrase_and_update_frequency() sqlstr=%s\n"
                 %sqlstr)
@@ -768,44 +800,40 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
                 "tabsqlitedb.check_phrase_and_update_frequency() sqlargs=%s\n"
                 %sqlargs)
         result = self.db.execute(sqlstr, sqlargs).fetchall()
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "check_phrase_and_update_frequency() result=%s\n" %result)
         if len(result) > 0:
-            # A match was found in user_db, increase user frequency by 1
-            self.update_phrase(input_phrase = input_phrase,
-                               phrase = phrase,
-                               p_phrase = p_phrase,
-                               pp_phrase = pp_phrase,
-                               user_freq = result[0][0]+1,
-                               database='user_db',
+            # A match was found in user_db, increase user frequency by
+            # user_freq_increment (1 by default)
+            self.update_phrase(input_phrase=input_phrase,
+                               phrase=phrase,
+                               p_phrase=p_phrase,
+                               pp_phrase=pp_phrase,
+                               user_freq=result[0][0]+user_freq_increment,
                                commit=commit)
             return
         # The phrase was not found in user_db.
-        # Add it as a new phrase, i.e. with user_freq = 1:
-        self.add_phrase(input_phrase = input_phrase,
-                        phrase = phrase,
-                        p_phrase = p_phrase,
-                        pp_phrase = pp_phrase,
-                        user_freq = 1,
-                        database = 'user_db',
+        # Add it as a new phrase, i.e. with user_freq = user_freq_increment
+        # (1 by default):
+        self.add_phrase(input_phrase=input_phrase,
+                        phrase=phrase,
+                        p_phrase=p_phrase,
+                        pp_phrase=pp_phrase,
+                        user_freq=user_freq_increment,
                         commit=commit)
         return
 
-    def remove_phrase(self, input_phrase=u'',
-                      phrase=u'', database='user_db', commit=True):
+    def remove_phrase(self, input_phrase='', phrase='', commit=True):
         '''
         Remove all rows matching “input_phrase” and “phrase” from database.
         Or, if “input_phrase” is “None”, remove all rows matching “phrase”
         no matter for what input phrase from the database.
         '''
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write(
                 "tabsqlitedb.remove_phrase() phrase=%(p)s\n"
                 %{'p': phrase.encode('UTF-8')})
-            sys.stderr.write(
-                "tabsqlitedb.remove_phrase() database=%s\n"
-                %database)
         if not phrase:
             return
         phrase = unicodedata.normalize(
@@ -815,23 +843,23 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
                 self._normalization_form_internal, input_phrase)
         if input_phrase:
             delete_sqlstr = '''
-            DELETE FROM %(database)s.phrases
+            DELETE FROM user_db.phrases
             WHERE input_phrase = :input_phrase AND phrase = :phrase
-            ;''' % {'database': database}
+            ;'''
         else:
             delete_sqlstr = '''
-            DELETE FROM %(database)s.phrases
+            DELETE FROM user_db.phrases
             WHERE phrase = :phrase
-            ;''' % {'database': database}
+            ;'''
         delete_sqlargs = {'input_phrase': input_phrase, 'phrase': phrase}
         self.db.execute(delete_sqlstr, delete_sqlargs)
         if commit:
             self.db.commit()
 
-    def extract_user_phrases(self, database='user_db'):
+    def extract_user_phrases(self):
         '''extract user phrases from database'''
         try:
-            db = sqlite3.connect(database)
+            db = sqlite3.connect(self.user_db_file)
             db.execute('PRAGMA wal_checkpoint;')
             phrases = db.execute(
                 'SELECT phrase, sum(user_freq) FROM phrases GROUP BY phrase;'
@@ -845,7 +873,6 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
             ]
             return phrases[:]
         except:
-            import traceback
             traceback.print_exc()
             return []
 
@@ -855,8 +882,8 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
         rows = self.db.execute(
             'SELECT input_phrase, phrase, p_phrase, pp_phrase, '
             + 'user_freq, timestamp FROM phrases;').fetchall()
-        p_token = u''
-        pp_token = u''
+        p_token = ''
+        pp_token = ''
         database_dict = {}
         for x  in rows:
             database_dict.update([((x[0], x[1], x[2], x[3]),
@@ -866,7 +893,7 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
                                     'pp_phrase': x[3],
                                     'user_freq': x[4],
                                     'timestamp': x[5]}
-                               )])
+                                  )])
         with codecs.open(filename, encoding='UTF-8') as file_handle:
             lines = [
                 unicodedata.normalize(self._normalization_form_internal, x)
@@ -902,7 +929,6 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
             self.db.commit()
             self.db.execute('PRAGMA wal_checkpoint;')
         except:
-            import traceback
             traceback.print_exc()
             return False
         return True
@@ -913,5 +939,22 @@ CREATE TABLE phrases (id INTEGER PRIMARY KEY, input_phrase TEXT, phrase TEXT, p_
             self.db.commit()
             self.db.execute('PRAGMA wal_checkpoint;')
         except:
+            traceback.print_exc()
+
+    def dump_database(self):
+        '''
+        Dump the contents of the database to stderr
+
+        (For debugging)
+        '''
+        try:
+            sys.stderr.write('SELECT * FROM desc;\n')
+            for row in self.db.execute("SELECT * FROM desc;").fetchall():
+                sys.stderr.write('%s\n' %repr(row))
+            sys.stderr.write('SELECT * FROM phrases;\n')
+            for row in self.db.execute("SELECT * FROM phrases;").fetchall():
+                sys.stderr.write('%s\n' %repr(row))
+        except:
             import traceback
             traceback.print_exc()
+            return

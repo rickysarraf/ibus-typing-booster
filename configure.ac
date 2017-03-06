@@ -1,9 +1,10 @@
 # Process this file with autoconf to produce a configure script.
 # vim:set et ts=4:
 #
-# ibus-typing-booster - The Tables engine for IBus
+# ibus-typing-booster - A completion input method for IBus
 #
-# Copyright (c) 20011-2012 Anish Patil <apatil@redhat.com>
+# Copyright (c) 2011-2012 Anish Patil <apatil@redhat.com>
+# Copyright (c) 2016 Mike FABIAN <mfabian@redhat.com>
 #
 # This library is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,21 +18,20 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
 
 # if not 1, append datestamp to the version number.
 m4_define([package_name], [ibus-typing-booster])
 m4_define([ibus_released], [1])
 m4_define([ibus_major_version], [1])
 m4_define([ibus_minor_version], [5])
-m4_define([ibus_micro_version], [0])
+m4_define([ibus_micro_version], [23])
 m4_define(ibus_maybe_datestamp,
     m4_esyscmd([if test x]ibus_released[ != x1; then date +.%Y%m%d | tr -d '\n\r'; fi]))
 
 m4_define([ibus_version],
     ibus_major_version.ibus_minor_version.ibus_micro_version[]ibus_maybe_datestamp)
 
-AC_INIT([package_name], [ibus_version], [http://code.google.com/p/ibus/issues/entry], [package_name])
+AC_INIT([package_name], [ibus_version], [https://github.com/mike-fabian/ibus-typing-booster/issues], [package_name])
 AM_INIT_AUTOMAKE([1.10])
 AM_MAINTAINER_MODE
 # AC_GNU_SOURCE
@@ -67,15 +67,18 @@ AC_CONFIG_FILES([po/Makefile.in
     engine/Makefile
     engine/typing-booster.xml.in
     engine/ibus-engine-typing-booster
+    engine/emoji-picker
+    engine/version.py
     setup/Makefile
     setup/ibus-setup-typing-booster
+    setup/version.py
+    tests/Makefile
     data/Makefile
     icons/Makefile
     icons/additional/Makefile
     hunspell-tables/Makefile
     m4/Makefile
-    ibus-typing-booster.spec
-    ibus-typing-booster.pc]
+    ibus-typing-booster.spec]
 )
 
 AC_OUTPUT

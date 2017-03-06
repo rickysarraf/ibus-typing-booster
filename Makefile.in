@@ -119,7 +119,7 @@ DIST_COMMON = $(srcdir)/Makefile.am $(top_srcdir)/configure \
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
  configure.lineno config.status.lineno
 mkinstalldirs = $(install_sh) -d
-CONFIG_CLEAN_FILES = ibus-typing-booster.spec ibus-typing-booster.pc
+CONFIG_CLEAN_FILES = ibus-typing-booster.spec
 CONFIG_CLEAN_VPATH_FILES =
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -175,9 +175,8 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(appdatadir)" \
-	"$(DESTDIR)$(pkgconfigdir)"
-DATA = $(appdata_DATA) $(pkgconfig_DATA)
+am__installdirs = "$(DESTDIR)$(appdatadir)"
+DATA = $(appdata_DATA)
 RECURSIVE_CLEAN_TARGETS = mostlyclean-recursive clean-recursive	\
   distclean-recursive maintainer-clean-recursive
 am__recursive_targets = \
@@ -208,7 +207,6 @@ CTAGS = ctags
 CSCOPE = cscope
 DIST_SUBDIRS = $(SUBDIRS)
 am__DIST_COMMON = $(srcdir)/Makefile.in \
-	$(srcdir)/ibus-typing-booster.pc.in \
 	$(srcdir)/ibus-typing-booster.spec.in ABOUT-NLS AUTHORS \
 	COPYING ChangeLog INSTALL NEWS README compile config.guess \
 	config.rpath config.sub install-sh missing py-compile
@@ -388,14 +386,10 @@ SUBDIRS = \
 	data \
 	po \
 	setup \
+	tests \
 	$(NULL)
 
 ACLOCAL_AMFLAGS = -I m4
-pkgconfig_DATA = \
-	ibus-typing-booster.pc \
-	$(NULL)
-
-pkgconfigdir = $(libdir)/pkgconfig
 
 # To register as an AppStream component to be visible in the software center
 # (See http://www.freedesktop.org/software/appstream/docs/ for more details):
@@ -421,7 +415,6 @@ MAINTAINERCLEANFILES = \
 
 EXTRA_DIST = \
 	config.rpath \
-	autogen.sh \
 	typing-booster.appdata.xml \
 	@PACKAGE_NAME@.spec \
 	$(NULL)
@@ -467,8 +460,6 @@ $(ACLOCAL_M4): @MAINTAINER_MODE_TRUE@ $(am__aclocal_m4_deps)
 $(am__aclocal_m4_deps):
 ibus-typing-booster.spec: $(top_builddir)/config.status $(srcdir)/ibus-typing-booster.spec.in
 	cd $(top_builddir) && $(SHELL) ./config.status $@
-ibus-typing-booster.pc: $(top_builddir)/config.status $(srcdir)/ibus-typing-booster.pc.in
-	cd $(top_builddir) && $(SHELL) ./config.status $@
 install-appdataDATA: $(appdata_DATA)
 	@$(NORMAL_INSTALL)
 	@list='$(appdata_DATA)'; test -n "$(appdatadir)" || list=; \
@@ -490,27 +481,6 @@ uninstall-appdataDATA:
 	@list='$(appdata_DATA)'; test -n "$(appdatadir)" || list=; \
 	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
 	dir='$(DESTDIR)$(appdatadir)'; $(am__uninstall_files_from_dir)
-install-pkgconfigDATA: $(pkgconfig_DATA)
-	@$(NORMAL_INSTALL)
-	@list='$(pkgconfig_DATA)'; test -n "$(pkgconfigdir)" || list=; \
-	if test -n "$$list"; then \
-	  echo " $(MKDIR_P) '$(DESTDIR)$(pkgconfigdir)'"; \
-	  $(MKDIR_P) "$(DESTDIR)$(pkgconfigdir)" || exit 1; \
-	fi; \
-	for p in $$list; do \
-	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
-	  echo "$$d$$p"; \
-	done | $(am__base_list) | \
-	while read files; do \
-	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(pkgconfigdir)'"; \
-	  $(INSTALL_DATA) $$files "$(DESTDIR)$(pkgconfigdir)" || exit $$?; \
-	done
-
-uninstall-pkgconfigDATA:
-	@$(NORMAL_UNINSTALL)
-	@list='$(pkgconfig_DATA)'; test -n "$(pkgconfigdir)" || list=; \
-	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
-	dir='$(DESTDIR)$(pkgconfigdir)'; $(am__uninstall_files_from_dir)
 
 # This directory's subdirectories are mostly independent; you can cd
 # into them and run 'make' without going through this Makefile.
@@ -683,7 +653,7 @@ distdir: $(DISTFILES)
 	  ! -type d ! -perm -444 -exec $(install_sh) -c -m a+r {} {} \; \
 	|| chmod -R a+r "$(distdir)"
 dist-gzip: distdir
-	tardir=$(distdir) && $(am__tar) | GZIP=$(GZIP_ENV) gzip -c >$(distdir).tar.gz
+	tardir=$(distdir) && $(am__tar) | eval GZIP= gzip $(GZIP_ENV) -c >$(distdir).tar.gz
 	$(am__post_remove_distdir)
 
 dist-bzip2: distdir
@@ -709,7 +679,7 @@ dist-shar: distdir
 	@echo WARNING: "Support for shar distribution archives is" \
 	               "deprecated." >&2
 	@echo WARNING: "It will be removed altogether in Automake 2.0" >&2
-	shar $(distdir) | GZIP=$(GZIP_ENV) gzip -c >$(distdir).shar.gz
+	shar $(distdir) | eval GZIP= gzip $(GZIP_ENV) -c >$(distdir).shar.gz
 	$(am__post_remove_distdir)
 
 dist-zip: distdir
@@ -727,7 +697,7 @@ dist dist-all:
 distcheck: dist
 	case '$(DIST_ARCHIVES)' in \
 	*.tar.gz*) \
-	  GZIP=$(GZIP_ENV) gzip -dc $(distdir).tar.gz | $(am__untar) ;;\
+	  eval GZIP= gzip $(GZIP_ENV) -dc $(distdir).tar.gz | $(am__untar) ;;\
 	*.tar.bz2*) \
 	  bzip2 -dc $(distdir).tar.bz2 | $(am__untar) ;;\
 	*.tar.lz*) \
@@ -737,7 +707,7 @@ distcheck: dist
 	*.tar.Z*) \
 	  uncompress -c $(distdir).tar.Z | $(am__untar) ;;\
 	*.shar.gz*) \
-	  GZIP=$(GZIP_ENV) gzip -dc $(distdir).shar.gz | unshar ;;\
+	  eval GZIP= gzip $(GZIP_ENV) -dc $(distdir).shar.gz | unshar ;;\
 	*.zip*) \
 	  unzip $(distdir).zip ;;\
 	esac
@@ -811,7 +781,7 @@ check: check-recursive
 all-am: Makefile $(DATA)
 installdirs: installdirs-recursive
 installdirs-am:
-	for dir in "$(DESTDIR)$(appdatadir)" "$(DESTDIR)$(pkgconfigdir)"; do \
+	for dir in "$(DESTDIR)$(appdatadir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-recursive
@@ -866,7 +836,7 @@ info: info-recursive
 
 info-am:
 
-install-data-am: install-appdataDATA install-pkgconfigDATA
+install-data-am: install-appdataDATA
 
 install-dvi: install-dvi-recursive
 
@@ -912,7 +882,7 @@ ps: ps-recursive
 
 ps-am:
 
-uninstall-am: uninstall-appdataDATA uninstall-pkgconfigDATA
+uninstall-am: uninstall-appdataDATA
 
 .MAKE: $(am__recursive_targets) install-am install-strip
 
@@ -926,12 +896,11 @@ uninstall-am: uninstall-appdataDATA uninstall-pkgconfigDATA
 	install-data install-data-am install-dvi install-dvi-am \
 	install-exec install-exec-am install-html install-html-am \
 	install-info install-info-am install-man install-pdf \
-	install-pdf-am install-pkgconfigDATA install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	installdirs-am maintainer-clean maintainer-clean-generic \
-	mostlyclean mostlyclean-generic pdf pdf-am ps ps-am tags \
-	tags-am uninstall uninstall-am uninstall-appdataDATA \
-	uninstall-pkgconfigDATA
+	install-pdf-am install-ps install-ps-am install-strip \
+	installcheck installcheck-am installdirs installdirs-am \
+	maintainer-clean maintainer-clean-generic mostlyclean \
+	mostlyclean-generic pdf pdf-am ps ps-am tags tags-am uninstall \
+	uninstall-am uninstall-appdataDATA
 
 .PRECIOUS: Makefile
 

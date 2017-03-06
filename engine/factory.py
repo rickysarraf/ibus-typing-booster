@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
 # vim:et sw=4 sts=4 sw=4
 #
-# ibus-typing-booster - The Tables engine for IBus
+# ibus-typing-booster - A completion input method for IBus
 #
 # Copyright (c) 2011-2013 Anish Patil <apatil@redhat.com>
-# Copyright (c) 2012-2013 Mike FABIAN <mfabian@redhat.com>
+# Copyright (c) 2012-2016 Mike FABIAN <mfabian@redhat.com>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-#  This program is distributed in the hope that it will be useful,
+#
+# This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
-#  You should have received a copy of the GNU General Public License
+#
+# You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>
 
 
+from gi import require_version
+require_version('IBus', '1.0')
 from gi.repository import IBus
 import hunspell_table
 import tabsqlitedb
@@ -29,33 +33,31 @@ from gettext import dgettext
 _  = lambda a : dgettext ("ibus-typing-booster", a)
 N_ = lambda a : a
 
-debug_level = int(0)
+DEBUG_LEVEL = int(0)
 
 class EngineFactory (IBus.Factory):
     """Table IM Engine Factory"""
-    def __init__(self, bus, db="", icon=""):
-        global debug_level
+    def __init__(self, bus, config_file_dir = ''):
+        global DEBUG_LEVEL
         try:
-            debug_level = int(os.getenv('IBUS_TYPING_BOOSTER_DEBUG_LEVEL'))
+            DEBUG_LEVEL = int(os.getenv('IBUS_TYPING_BOOSTER_DEBUG_LEVEL'))
         except (TypeError, ValueError):
-            debug_level = int(0)
-        if debug_level > 1:
-            sys.stderr.write("EngineFactory.__init__(bus=%s, db=%s, icon=%s)\n"
-                             % (bus, db, icon))
-        if db:
-            self.db = tabsqlitedb.tabsqlitedb(config_filename=db)
-        else:
-            self.db = None
+            DEBUG_LEVEL = int(0)
+        if DEBUG_LEVEL > 1:
+            sys.stderr.write(
+                "EngineFactory.__init__(bus = %s, config_file_dir = %s)\n"
+                % (bus, config_file_dir))
         self.dbdict = {}
         self.enginedict = {}
         self.bus = bus
+        self._config_file_dir = config_file_dir
         #engine.Engine.CONFIG_RELOADED(bus)
         super(EngineFactory, self).__init__(
             connection=bus.get_connection(), object_path=IBus.PATH_FACTORY)
         self.engine_id = 0
 
     def do_create_engine(self, engine_name):
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write("EngineFactory.do_create_engine(engine_name=%s)\n"
                              % engine_name)
         engine_base_path = "/com/redhat/IBus/engines/table/%s/engine/"
@@ -66,12 +68,14 @@ class EngineFactory (IBus.Factory):
                 self.db = self.dbdict[engine_name]
             else:
                 self.db = tabsqlitedb.tabsqlitedb(
-                    config_filename=engine_name+'.conf')
+                    config_filename = os.path.join(
+                        self._config_file_dir,
+                        engine_name.replace('typing-booster:', '') + '.conf'))
                 self.dbdict[engine_name] = self.db
             if engine_name in self.enginedict:
                 engine = self.enginedict[engine_name]
             else:
-                engine = hunspell_table.tabengine(
+                engine = hunspell_table.TypingBoosterEngine(
                     self.bus, engine_path + str(self.engine_id), self.db)
                 self.enginedict[engine_name] = engine
                 self.engine_id += 1
@@ -84,7 +88,7 @@ class EngineFactory (IBus.Factory):
 
     def do_destroy (self):
         '''Destructor, which finish some task for IME'''
-        if debug_level > 1:
+        if DEBUG_LEVEL > 1:
             sys.stderr.write("EngineFactory.do_destroy()\n")
         for _db in self.dbdict:
             self.dbdict[_db].sync_usrdb()
