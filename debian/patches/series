@@ -1,1 +1,2 @@
 ibus-use-hunspell-directory.patch
+only-test-eng-lang.patch

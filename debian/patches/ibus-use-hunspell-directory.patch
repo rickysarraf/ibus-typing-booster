@@ -1,26 +1,13 @@
-Index: ibus-typing-booster-1.5.0/engine/hunspell_suggest.py
+Index: ibus-typing-booster/hunspell-tables/en_US.conf
 ===================================================================
---- ibus-typing-booster-1.5.0.orig/engine/hunspell_suggest.py
-+++ ibus-typing-booster-1.5.0/engine/hunspell_suggest.py
-@@ -52,7 +52,7 @@ class Dictionary:
-         if debug_level > 1:
-             sys.stderr.write(
-                 "Dictionary.__init__(name=%s)\n" %name)
--        self.loc = '/usr/share/myspell'
-+        self.loc = '/usr/share/hunspell'
-         self.name = name
-         self.encoding = 'UTF-8'
-         self.buffer = None
-Index: ibus-typing-booster-1.5.0/hunspell-tables/en_US.conf
-===================================================================
---- ibus-typing-booster-1.5.0.orig/hunspell-tables/en_US.conf
-+++ ibus-typing-booster-1.5.0/hunspell-tables/en_US.conf
-@@ -8,7 +8,7 @@ author = Anish Patil <apatil@redhat.com>
+--- ibus-typing-booster.orig/hunspell-tables/en_US.conf	2017-03-06 16:15:13.551991460 +0530
++++ ibus-typing-booster/hunspell-tables/en_US.conf	2017-03-06 16:15:13.547991387 +0530
+@@ -8,7 +8,7 @@
  status_prompt = en
  layout = default
  hunspell_dict = en_US.dic
 -hunspell_dict_package = hunspell-en
 +hunspell_dict_package = hunspell-en-us
- ime_name = English - US (Hunspell)
+ ime_name = English - US (Typing Booster)
  symbol = en-US
  imes = Native Keyboard:NoIme,Latin-Pre:t-latn-pre,Latin-Post:t-latn-post

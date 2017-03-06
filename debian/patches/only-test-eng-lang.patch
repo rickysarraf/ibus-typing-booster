@@ -1,0 +1,36 @@
+Index: ibus-typing-booster/tests/test_itb.py
+===================================================================
+--- ibus-typing-booster.orig/tests/test_itb.py	2017-03-06 16:09:52.446095435 +0530
++++ ibus-typing-booster/tests/test_itb.py	2017-03-06 16:31:41.854099335 +0530
+@@ -42,11 +42,11 @@
+         self.bus = IBus.Bus()
+         # it doesn’t really matter which config file for which language is used
+         self.db = tabsqlitedb.tabsqlitedb(
+-            config_filename ='../hunspell-tables/de_DE.conf',
++            config_filename ='../hunspell-tables/en_US.conf',
+             user_db_file = ':memory:')
+         self.engine = TypingBoosterEngine(
+             self.bus,
+-            '/com/redhat/IBus/engines/table/typing_booster_de_DE/engine/0',
++            '/com/redhat/IBus/engines/table/typing_booster_en_US/engine/0',
+             self.db,
+             unit_test = True)
+         self.backup_original_settings()
+@@ -403,7 +403,7 @@
+ 
+     def test_accent_insensitive_matching_german_dictionary(self):
+         self.engine.set_current_imes(['NoIme', 't-latn-post'])
+-        self.engine.set_dictionary_names(['de_DE'])
++        self.engine.set_dictionary_names(['en_US'])
+         self.engine.do_process_key_event(IBus.KEY_A, 0, 0)
+         self.engine.do_process_key_event(IBus.KEY_l, 0, 0)
+         self.engine.do_process_key_event(IBus.KEY_p, 0, 0)
+@@ -424,7 +424,7 @@
+ 
+     def test_accent_insensitive_matching_german_database(self):
+         self.engine.set_current_imes(['t-latn-post', 'NoIme'])
+-        self.engine.set_dictionary_names(['de_DE'])
++        self.engine.set_dictionary_names(['en_US'])
+         # Type “Glühwürmchen”
+         self.engine.do_process_key_event(IBus.KEY_G, 0, 0)
+         self.engine.do_process_key_event(IBus.KEY_l, 0, 0)
