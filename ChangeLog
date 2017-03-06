@@ -1,0 +1,393 @@
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 10 Aug 2016 Released 1.5.0 version
+* If the lookup table shows related words, “Escape” shows the original lookup table
+* Use itb_nltk.py to find related words (synonyms, hypernyms, and hyponyms)
+* Add a module to find related words using NLTK
+* Add a feature to find similar emoji
+* Add predictions for emoji (optional, on by default)
+* Add a module to match emoji using Unicode, CLDR, and emojione data
+* Make typing-booster.appdata.xml translatable
+* When ignoring key release events, “False” should be returned, not “True” (Resolves: rhbz#1365497)
+* Make typing smoother by updating the candidates using GLib.idle_add()
+* Make it possible to enter a space into the preëdit by typing “G- ” (AltGr+Space)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 17 Jul 2016 Released 1.4.8 version
+* Make m17n_translit handle “NoIme” as a dummy input method
+* Simplify some code in hunspell_table.py which did treat “NoIme” as a special case
+* Commit preëdit if modifier keys without transliteration are typed and pass the key through (Resolves: rhbz#1351748)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 11 Jul 2016 Released 1.4.7 version
+* Check if the commit key would change the transliteration if used as regular input (Resolves: rhbz#1353672)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 01 Jul 2016 Released 1.4.6 version
+* Pass modifier key combinations through if there is no possible transliteration for that key combination (Resolves: rhbz#1351748)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 11 May 2016 Released 1.4.5 version
+* Do not colourize the preëdit dark blue, that is unreadable on dark backgrounds (Resolves: rhbz#1335201)
+* Set the size of the libm17n mconv conversion buffer correctly (Resolves: rhbz#1335021)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 10 May 2016 Released 1.4.4 version
+* self._current_imes needs to be updated before self.init_transliterators() (Resolves: rhbz#1334579)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 28 Apr 2016 Released 1.4.3 version
+* Fix AttributeError: 'editor' object has no attribute 'trans (Resolves: rhbz#1331338)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 27 Apr 2016 Released 1.4.2 version
+* Fix mistyped variable name (Resolves: rhbz#1330461)
+* Add option to remember the preëdit input method used last
+* Update German translations
+* The combobox in the setup tool should show the first supported ime from dconf
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 20 Apr 2016 Released 1.4.1 version
+* Avoid unnessary initialization of transliterators when the set of input methods has not changed
+* Add  property menu to choose the current preedit input method
+* Display preëdit input method in aux_string also when number of candidates is not shown
+* Add some tooltips to the setup tool
+* Update German translations
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 08 Apr 2016 Released 1.4.0 version
+* Call IBus.Bus() in __main__, not in __init__ of class SetupUI (Resolves: rhbz#1325338)
+* Multilingual support, more than one language in an engine
+* Simple option in the setup tool to enable bilingual support (one language + Enlish)
+* The default of the option “Add direct input” in the setup tool should be false (bug found by Pravin Satpute)
+* Changing the main input method with the setup tool should not remove the direct input (bug found by Pravin Satpute)
+* Add 0 as a digit to commit directly when using digits as select keys
+* Clear dictionaries in Hunspell class before reloading
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 08 Feb 2016 Released 1.3.1 version
+* Use new transliterator  from m17n_translit.py also when switching input methods in the setup tool (Resolves: rhbz#1304677)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 15 Dez 2015 Released 1.3.0 version
+* Use libm17n directly instead of going through libtranslit
+* Forward key events triggering a commit using “forward_key_event()” instead of relying on “return False” (Resolves: rhbz#1291238)
+* Add code to use F1-F9 as well as keys to select candidates for commit or remove
+* Don’t commit invisible candidates with select keys with numbers greater than the length of a page of the candidate list
+* Control-arrow-left and Control-arrow-right now commit when the edges of the preëdit string are reached
+* Alt-<number> does not delete a prediction anymore, now only Control-<number> does this
+* Add an option to disable the use of the digits 1-9 as selection keys (useful if one wants easier number input, selection then works only with the F1-F9 keys)
+* Support input methods using AltGr (e.g. mr-inscript2) and Alt keys (e.g. ta-lk-renganathan) (Resolves: rhbz#1051405, rhbz#772665)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 02 Nov 2015 Released 1.2.15 version
+* Use open() instead of codecs.open() to make the input method help button work again (Resolves: rhbz#1276992)
+* Fix some pylint warnings
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 11 Oct 2015 Released 1.2.14 version
+* Add Catalan translations, thanks to Robert Antoni Buj Gelonch <rbuj@fedoraproject.org> (Resolves: rhbz#1268153)
+* Add Catalan engine
+* Add optional debug code
+* Update German translations
+* Fix some pylint warnings
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 22 Sep 2015 Released 1.2.13 version
+* Add a property to start the setup tool (Resolves: rhbz#1260088)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 27 Aug 2015 Released 1.2.12 version
+* Use open() instead of codecs.open() to fix dictionary loading problem on F23 (Resolves: rhbz#1257465)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 24 Sep 2014 Released 1.2.11 version
+* Require Python >= 3.3
+* Always write xml output in UTF-8 encoding, not in the encoding of the current locale
+* Change class “KeyEvent” to store the keycode as well
+* Commit when hitting the borders of the preëdit with the arrow keys (Resolves: rhbz#1140502)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 27 Feb 2014 Released 1.2.10 version
+* make profiling work again and make it easier to use
+* tiny performance improvement
+* some code simplification
+* port from Python2 to Python3
+* minor improvements in user_transliteration.py
+* add python-enchant support
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 17 Jan 2014 Released 1.2.9 version
+* Fix behaviour of arrow right keys in preëdit (Resolves: rhbz#1049324)
+* Add timestamps to entries in the user database
+* Add timestamp support to user_transliteration.py
+* Use a single user database for all engines
+* Add *-inscript2 transliteration options to the Indian languages where these were still missing (Resolves: rhbz#1051405)
+* Make it possible to use multiple hunspell dictionaries at the same time
+* Make it possible to specify a list of dictionaries in the config files
+* Make it possible to get a word back into preëdit by using backspace (Resolves: rhbz#1032442)
+
+* Author: Anish Patil <apatil@redhat.com>
+* 20 Dec 2013 Released 1.2.8 version
+* change of IME name for oriya language(#1045299)
+* Fixed issue multiple instance of set up menu(#1045294)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 20 Nov 2013 Released 1.2.7 version
+* Don’t strip characters with Unicode category “Cf” (Other, format) from tokens (Resolves: rhbz#1032504)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 14 Nov 2013 Released 1.2.6 version
+* Change wording of the option to show the total number of candidates (Resolves: rhbz#1029748)
+* Commit candidate clicked on with the mouse (Resolves: rhbz#1029822)
+* Use direct input also for IBus.InputPurpose.PIN
+* remove unused und superfluous arguments of constructor of Hunspell class
+* Add some transliteration options to .conf files which had only native keyboard enabled
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 11 Oct 2013 Released 1.2.5 version
+* Add feature to display input method description to setup tool
+* Remove the options “m17n_mim_name” and “other_ime” from the .conf files
+* remove tab_enable option from config files
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 28 Sep 2013 Released 1.2.4 version
+* Use normalization form NFD internally for Korean as well
+* Add check for input purpose for gnome-shell password dialog (Resolves: rhbz#1013008 - ibus-typing-booster shows entered text in password fields)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 06 Aug 2013 Released 1.2.3 version
+* Fix exception handling when trying to install a rpm package (Resolves: rhbz#986178)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 15 Jul 2013 Released 1.2.2 version
+* Commit immediately when certain punctuation characters are typed and transliteration is not used (Resolves: rhbz#981179)
+* Add an option to try completion only when a minimum number of characters has been typed
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 03 Jul 2013 Released 1.2.1 version
+* Pop up a message box when a file has been read to train the database, indicating success or failure (Resolves: rhbz#979933)
+* Ignore most punctuation characters and mathematical symbols when tokenizing (Resolves: rhbz#979939)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 28 Jun 2013 Released 1.2.0 version
+* Make TAB when used to enable/disable the lookup table work as a toogle
+* Create a VIEW for “LIKE input_phrase%” in select_words() and use that in the following SELECT statements (Makes candidate calculation more than 10 times faster)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 24 Jun 2013 Released 1.1.0 version
+* Add a commit=True parameter to check_phrase_and_update_frequency()
+* Fix that the page_size is shown as 0 in the setup tool if it has not been set before
+* Do not use AUTOINCREMENT
+* Make it possible to exit the setup tool by typing Control-C in the terminal
+* Add feature to read a text file for training the user database
+* Update German translations and .pot file
+* Fix error when the hunspell dictionary for an engine is missing
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 18 Jun 2013 Released 1.0.3 version
+* Don’t output page_size in “/usr/libexec/ibus-engine-typing-booster --xml” (Resolves: rhbz#975449 - ibus-daemon prints warnings because “/usr/libexec/ibus-engine-typing-booster --xml” prints the invalid element “page_size”)
+* Use ~/.local/share/ibus-typing-booster/ to store user data and log files (Resolves: rhbz#949035 - don't use a hidden directory under .local/share)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 14 Jun 2013 Released 1.0.2 version
+* Push context *after* writing the trigram to the database
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 14 Jun 2013 Released 1.0.1 version
+* Fix problem when IBUS_TYPING_BOOSTER_DEBUG_LEVEL is not set
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 13 Jun 2013 Released 1.0.0 version
+* Remove mudb and use “Write-Ahead Logging”
+* Introduce an environment variable IBUS_TYPING_BOOSTER_DEBUG_LEVEL for debugging
+* Speed up converting an old database to the current format
+* Make prediction more intelligent by using context of up to 2 previous words
+* Automatically remove whitespace between the last word and a punctuation character ending a sentence
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 02 Jun 2013 Released 0.0.32 version
+* Fix behaviour of Control+Number
+* When committing by typing TAB, update frequency data in user database
+* When committing by tying RETURN or ENTER, update frequency data in user database
+* Do not try to match very long words in the hunspell dictionaries
+* Rewrite the code for moving and editing within the preëdit (Resolves: rhbz#969847 https://bugzilla.redhat.com/show_bug.cgi?id=969847)
+* Fix encoding error when changing values with the setup tool
+* Add ko_KR.conf and ko_KR.svg
+* Use normalization forms NFD or NFKD internally and NFC externally
+* Remove old way of using libtranslit via ctypes
+* Get rid of “freq” column in databases
+* Remove too simpleminded auto-capitalization
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 29 May 2013 Released 0.0.31 version
+* Remove lots of unused and/or useless code
+* Simplify some code
+* Fix the problem that after “page down” the first “arrow down” does not move down in the lookup table
+* Never use “-” or “=” as page up and page down keys
+* Print more useful debug output when an exception happens
+* Replace unencodable characters when asking pyhunspell for suggestions
+* Get dictionary encoding from .aff file
+* Get rid of the the variable “valid_input_chars” (Resolves: rhbz#968209 https://bugzilla.redhat.com/show_bug.cgi?id=968209)
+* Remove option “valid_input_chars” from .conf files and template.txt
+* Replace keysym2unichr(key.code) with IBus.keyval_to_unicode(key.code)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 26 May 2013 Released 0.0.30 version
+* simplify database structure and code
+* The Swedish hunspell dictionary is in UTF-8, not ISO-8859-1
+* SQL LIKE should behave case sensitively
+* Do not throw away the input phrase in hunspell_suggest.suggest()
+* Merge candidates which have the same resulting phrase in select_words()
+* Remove phrases always from the user database when typing Alt+Number
+* Sync memory user database “mudb” to disk user database “user_db” on focus out
+* Delete all records from mudb after syncing to user_db
+* Do not prevent phrases of length < 4 to be added to the frequency database
+* Do not use lang_chars for matching in the hunspell dictionaries, return immediately if input contains a “/” (Resolves: #966947 https://bugzilla.redhat.com/show_bug.cgi?id=966947)
+* Remove lang_chars variable
+* Use re.escape() to escape the string typed by the user correctly for use in a regular expression
+* When removing a phrase with Alt+Number, remove it independent of the input_phrase
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 14 May 2013 Released 0.0.29 version
+* Fix setup tool to use the new class for parsing the config files (Resolves: #962609 https://bugzilla.redhat.com/show_bug.cgi?id=962609)
+* Improve code in select_words() and check_phrase_internal()
+* Avoid adding duplicates to the database by checking first whether phrase is already there in add_phrase()
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 10 May 2013 Released 0.0.28 version
+* Speed up generating the xml list of the engines (Resolves: #961923 - python /usr/share/ibus-typing-booster/engine/main.py --xml is extremely slow when many hunspell dictionaries are installed)
+* Put the input phrase into a single column in the databases instead of using one column for each character
+* Get rid of tab_dict
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 06 May 2013 Released 0.0.27 version
+* simplify code in select_words()
+* remove some unused functions
+* fix some typos in comments
+* fix spelling error in language name for Assamese (Resolves: #959860 - [as_IN] Wrong keymap name Assami )
+* fix spelling error in language name for Gujarati (Resolves: #958770 - [ibus-typing-Booster][gu-IN]- Typo error)
+* remove ✓ from symbol in the .conf files (Resolves: #875285 - IME names too long in gnome-shell Input Sources indicator)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 14 Feb 2013 Released 0.0.26 version
+* Fix mouse clickable arrow icons in lookup table
+* Use different .svg icons for all engines
+* Increase number of suggestions from hunspell
+* Use the auxiliary text to display the number of candidates
+* Make the display of the number of candidates in the auxiliary text optional
+* Display of the number of candidates needs to be updated on page-up and page-down
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 18 Dec 2012 Released 0.0.25 version
+* Port to use pygobject3
+* Remove some code inherited from ibus-table which makes no sense for ibus-typing-booster
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 06 Dec 2012 Released 0.0.24 version
+* Use pyhunspell to add spell-checking suggestions (Resolves #884808)
+* Use underline for preedit
+* Colourize spellchecking suggestions and system phrases already used
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 23 Nov 2012 Released 0.0.23 version
+* Make the engine reload the dictionary when the dictionary is installed via the setup tool (Resolves: #879262)
+* get rid of unused parameter “m17n” in “class Hunspell”
+* Use “import curses.ascii” instead of “from ibus import ascii”
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 14 Nov 2012 Released 0.0.22 version
+* Add combobox to setup GUI to select input method
+* Make the engine use the input method from the dconf setting (Resolves: #876666)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 12 Nov 2012 Released 0.0.21 version
+* Shorten symbol displayed in gnome panel (Resolves: #875285)
+* Add space before ( in long display name
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 08 Nov 2012 Released 0.0.20 version
+* Add the names of the dictionary packages to the .conf files
+* Pass the name of the config file to the setup tool instead the name of the engine
+* Improve setup GUI to make correct dictionary installable (Resolves #874421)
+* Add page size spin button to setup tool
+* Connect signals in __init__ of SetupUI after setting the initial values
+* Make the setup tool find the right config file in gnome-shell on Fedora 18
+* Update German translation
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 06 Nov 2012 Released 0.0.19 version
+* fix rpmlint warning “incorrect-fsf-address”
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 31 Oct 2012 Released 0.0.18 version
+* Add “import sys” back to keysym2ucs.py
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 31 Oct 2012 Released 0.0.17 version
+* Save setup option “Enable suggestions by Tab Key” correctly in dconf (Resolves: #871056)
+* Make setup dialog translatable and add German translations
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 24 Oct 2012 Released 0.0.16 version
+* Make enabling the lookup table with the TAB key work correctly (Resolves: #869687)
+* Simplify code in add_input()
+* Make German input typed in NFD work
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 22 Oct 2012 Released 0.0.15 version
+* Make sure the lookup table is hidden if there are no candidates to suggest (Resolves: #869050)
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 22 Oct 2012 Released 0.0.14 version
+* Show an obvious warning when the hunspell dictionary needed is not found
+* Show exact matches in the .dic files as suggestions as well
+* Do not forget the input method used last when activating a previously used engine
+* Add ru_RU.conf to Makefile.am and Makefile.in
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 18 Oct 2012 Released 0.0.13 version
+* add de_DE.conf to Makefile.am and Makefile.in it was missing from the release tarball
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 18 Oct 2012 Released 0.0.12 version
+* add missing file keysym2ucs.py to release tarball
+
+* Author: Mike FABIAN <mfabian@redhat.com>
+* 18 Oct 2012 Released 0.0.11 version
+* Add .conf files for many languages and improve some existing .conf files
+* Read other_ime option case insensitively
+* Split only at the first = in a line in a .conf file
+* Fix the problem that the user defined phrases are lost when switching engines
+* use “layout = default” instead of “layout = us” in all .conf files
+* Make sure the input of transliterate() is UTF-8 encoded
+* Add a keysym2unichr() function and use it to support languages which have non Latin1 input
+* Let first letter start with index 1 in autogenerated tabdict
+* Use autogenerated tabdict always, not only in m17n mode
+* Use special value 'NoIme' to indicate that no input method should be used
+* Use contents of lang_chars for the regexp to match words in the dictionaries
+* In process_key_event, do not return False when a non-ASCII character has been typed
+* Read option valid_input_chars as UTF-8
+* Use the encoding option from the .conf file always, not only in m17n mode
+* Whether m17n mode is used should depend on the .conf file, not the language
+* Use correct encoding to decode the dictionary file
+* Some other minor fixes
+
+* Author: Anish Patil <apatil@redhat.com>
+* 27 Sep 2012 Released 0.0.10 version
+* Added .desktop file to support g-c-c
+* Added en_GB.conf file
+* Fixed minor issues
+
+* Author: Anish Patil <apatil@redhat.com>
+* 13 Sep 2012 Released 0.0.9 version
+* Added feature suggestions can be turned on/off dynamically
+* Fixed issues #852994,#852993
+	
+* Author: Anish Patil <apatil@redhat.com>
+* 14 Aug 2012 Released 0.0.8 version
+* Fixed minor issues,new icon 
+
+* Author: Anish Patil <apatil@redhat.com>
+* 12 Jul 2012 Released 0.0.7 version
+
+
